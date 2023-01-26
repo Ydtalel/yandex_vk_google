@@ -1,11 +1,7 @@
 import json
 import requests
-import yadisk
 import datetime
 from tqdm import tqdm
-from pydrive.auth import GoogleAuth
-from pydrive.drive import GoogleDrive
-import os
 
 how_many_img = 5  # максимально можем указать до 200
 
@@ -16,10 +12,6 @@ def write_response_json(data):
 
 
 def get_response():
-    # please, do not copy my token
-    token = 'vk1.a.T1U4QLxClpB8zSkQfVMGEqSiRAAx6qFo8cnnXBwMvYeEPaNT9cnHHEx_rVBDsIjOYaIoKyIKaN3QAr' \
-            '6s7Koep1cjmkLjYb_9JRaWLfOKYfeZDeTIxQmCE_mL0tuKgMZa-XuJQ2Y2em3um7uFcfhyYPLHeVNYOuTHHczsKdoF_' \
-            'eL7WF4sQkt2xKBwmg2V_buGL4cz8GcA6lo7gmRUAU9JMw'
     params = {
         'access_token': token,
         'v': 5.131,
@@ -67,32 +59,40 @@ def read_response_json():
     return check_list
 
 
+def get_headers():
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': 'OAuth {}'.format(yandex_token)
+    }
+
+
+def get_upload_link(file_path):
+    upload_url = "https://cloud-api.yandex.net/v1/disk/resources/upload"
+    headers = get_headers()
+    params = {"path": file_path, "overwrite": "true"}
+    response = requests.get(upload_url, headers=headers, params=params)
+    return response.json()
+
+
+def upload(file_path, filename):
+    href = get_upload_link(file_path=file_path).get("href", "")
+    response = requests.put(href, data=open(filename, 'rb'))
+
+
 def upload_to_yandex(data):
-    disk = yadisk.YaDisk(token=yandex_token)
-    disk.mkdir('/VK_photos')
     for name in tqdm(data, desc="uploading photo to yandex", unit=' Photo', ncols=150):
-        disk.upload(f"media/{name}.jpg", f"/VK_photos/{name}.jpg")
-
-
-def upload_to_google(directory=''):
-    google_auth = GoogleAuth()
-    google_auth.LocalWebserverAuth()
-    drive = GoogleDrive(google_auth)
-    for file_name in tqdm(os.listdir(directory), desc="uploading photo to google", unit=' Photo', ncols=150):
-        photo = drive.CreateFile({'title': f'{file_name}'})
-        photo.SetContentFile(os.path.join(directory, file_name))
-        photo.Upload()
+        upload(file_path=f"VK_photos/{name}.jpg", filename=f"media/{name}.jpg")
 
 
 def main():
     get_response()
     data = read_response_json()
     upload_to_yandex(data)
-    upload_to_google(directory='media/')
     print('data was uploaded successfully 🔥🔥🔥')
 
 
 if __name__ == '__main__':
     user_id = input('Введите идентификатор пользователя Vkontakte: ')
     yandex_token = input('Введите Яндекс токен: ')
+    token = input('Введите ваш токен вконтакте : ')
     main()
