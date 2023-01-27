@@ -3,8 +3,6 @@ import requests
 import datetime
 from tqdm import tqdm
 
-how_many_img = 5  # максимально можем указать до 200
-
 
 def write_response_json(data):
     with open('response.json', 'w') as file:
@@ -12,6 +10,7 @@ def write_response_json(data):
 
 
 def get_response():
+    how_many_img = 5  # максимально можем указать до 200
     params = {
         'access_token': token,
         'v': 5.131,
@@ -84,10 +83,30 @@ def upload_to_yandex(data):
         upload(file_path=f"VK_photos/{name}.jpg", filename=f"media/{name}.jpg")
 
 
+def upload_to_google(data):
+    url = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart"
+    folder_id = '1QKD2bIrH2V20ppRsEf_K8gk28bGgjmb4'
+    headers = {
+        "Authorization": f"Bearer {g_token}"
+    }
+    for name in tqdm(data, desc="uploading photo to google", unit=' Photo', ncols=150):
+        params = {
+            "name": f"{name}",
+            "parents": [folder_id]
+        }
+
+        files = {
+            'data': ('metadata', json.dumps(params), 'application/json;charset=UTF-8'),
+            'file': open(f"media/{name}.jpg", 'rb')
+        }
+        response = requests.post(url, headers=headers, files=files)
+
+
 def main():
     get_response()
     data = read_response_json()
     upload_to_yandex(data)
+    upload_to_google(data)
     print('data was uploaded successfully 🔥🔥🔥')
 
 
@@ -95,4 +114,5 @@ if __name__ == '__main__':
     user_id = input('Введите идентификатор пользователя Vkontakte: ')
     yandex_token = input('Введите Яндекс токен: ')
     token = input('Введите ваш токен вконтакте : ')
+    g_token = input('Введите ваш токен google : ')
     main()
